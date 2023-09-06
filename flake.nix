@@ -14,6 +14,8 @@
 			in rec {
 				devShells.default = pkgs.mkShell {
 					nativeBuildInputs = with pkgs; [
+						haskellPackages.haskell-language-server
+						haskellPackages.ghc
 						idris2
 						gnumake
 					];
