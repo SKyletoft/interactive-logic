@@ -44,9 +44,11 @@ last :: [a] -> Maybe a
 last [] = Nothing
 last xs = Just . head . reverse $ xs
 
+-- | Check if applying the law to the current set of statements is syntactically valid.
+--   Does not check if it holds logically
 checkStatement :: [Statement] -> Law -> Maybe Statement
 checkStatement ss = \case
-  (AndEliminationLeft x) ->
+  AndEliminationLeft x ->
     case ss !! x of
       l `And` _ -> Just l
       _ -> Nothing
