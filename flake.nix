@@ -16,6 +16,8 @@
 					nativeBuildInputs = with pkgs; [
 						haskellPackages.haskell-language-server
 						haskellPackages.ghc
+						haskellPackages.stylish-haskell
+						haskellPackages.hindent
 						idris2
 						gnumake
 					];
