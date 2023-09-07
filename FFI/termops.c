@@ -31,5 +31,5 @@ void setup_terminal() {
 
 void deinit_terminal() {
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-	exit(0);
+	/* exit(0); */
 }
