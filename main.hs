@@ -2,11 +2,15 @@
 
 module Main where
 
+-- import qualified Termios as Termios
+
 import qualified Data.Maybe as Maybe
 import qualified Data.List as List
 
 main :: IO ()
-main = putStrLn "Hello"
+main = do
+  -- Termios.setupTerminal
+  putStrLn "Hello"
 
 todo :: a
 todo = error "TODO"
