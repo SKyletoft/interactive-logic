@@ -52,31 +52,31 @@ checkStatement ss = \case
     case ss !! x of
       l `And` _ -> Just l
       _ -> Nothing
-  (AndEliminationRight x) ->
+  AndEliminationRight x ->
     case ss !! x of
       _ `And` r -> Just r
       _ -> Nothing
-  (AndIntroduction x y) ->
+  AndIntroduction x y ->
     Just $ (ss !! x) `And` (ss !! y)
-  (ImplicationIntroduction x y) ->
+  ImplicationIntroduction x y ->
     case ss !! x of
       AssumptionBlock premise zz ->
         let last' = Maybe.fromMaybe premise (last zz)
           in Just $ premise `Implies` last'
       _ -> Nothing
-  (DoubleNotIntroduction x) -> Just . Not . Not $ ss !! x
-  (DoubleNotElimination x) ->
+  DoubleNotIntroduction x -> Just . Not . Not $ ss !! x
+  DoubleNotElimination x ->
     case ss !! x of
       Not (Not x) -> Just x
       _ -> Nothing
-  (OrEliminationLeft x y) ->
+  OrEliminationLeft x y ->
     case (ss !! x, ss !! y) of
       (l `Or` _, l') ->
         if l == l'
           then Just l
           else Nothing
       _ -> Nothing
-  (OrEliminationRight x y) ->
+  OrEliminationRight x y ->
     case (ss !! x, ss !! y) of
       (_ `Or` r, r') ->
         if r == r'
