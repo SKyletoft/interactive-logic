@@ -13,36 +13,21 @@ import qualified GHC.IO.Handle.FD (stdout)
 import qualified Prelude
 import Prelude hiding (putStr, putStrLn, getChar)
 
-f = do
-  l <- parseLaw
-  print l
-  if Maybe.isJust l
-    then f
-    else return ()
 
-main :: IO ()
-main = do
-  -- test
-  f
+--------------------- OPERATORS ----------------------
 
-i :: [IO Char]
-i = getChar : i
-  
-input :: IO [Char]
-input = sequence i
+-- Copied from Data.List.Extra
+(!?) :: [a] -> Int -> Maybe a
+[] !? _ = Nothing
+(x:_) !? 0 = Just x
+(_:xs) !? n = xs !? (n - 1)
 
-test :: IO ()
-test = do
-  i' <- input
-  case i' of
-    'a':'a':_ -> putStrLn "You wrote: aa"
-    'a':'b':_ -> putStrLn "You wrote: ab"
-    'a':'c':'c':[] -> putStrLn "You wrote: acc"
-    'd':_ -> putStrLn "You wrote: d"
-    _ -> putStrLn "Invalid input"
-  return ()
+(-->) :: Bool -> Bool -> Bool
+True --> False = False
+_ --> _ = True
 
--- Totally not cursed IO wrappers
+
+-------------------- IO WRAPPERS ---------------------
 
 getChar :: IO Char
 getChar = do
@@ -61,8 +46,36 @@ putStrLn s = do
   Prelude.putStrLn s
   GHC.IO.Handle.hFlush GHC.IO.Handle.FD.stdout
 
+
+--------------------- HELPERS ------------------------
+
 todo :: a
 todo = error "TODO"
+
+
+--------------------- ACTUAL CODE --------------------
+
+main :: IO ()
+main = repl []
+
+repl :: [Statement] -> IO ()
+repl ss = do
+  putStrLn . unlines . map prettyShow $ ss
+  putStrLn $ if check $ last ss
+    then "Valid"
+    else "Contradiction"
+  law <- parseLaw
+  if Maybe.isNothing law
+    then do
+      putStrLn "Bad input"
+      repl ss
+    else do
+      let s = checkStatement ss (Maybe.fromJust law)
+      if Maybe.isNothing s
+        then do
+          putStrLn "Bad law"
+          repl ss
+        else repl (ss ++ [Maybe.fromJust s])
 
 parseLaw :: IO (Maybe Law)
 parseLaw = do
@@ -141,6 +154,19 @@ data Statement
   | Bottom
   deriving (Show, Eq)
 
+parse :: String -> Statement
+parse = todo
+
+prettyShow :: Statement -> String
+prettyShow = \case
+  l `And` r -> "(" ++ prettyShow l ++ " Λ " ++ prettyShow r ++ ")"
+  l `Or` r -> "(" ++ prettyShow l ++ " V " ++ prettyShow r ++ ")"
+  Not l -> "¬" ++ prettyShow l
+  l `Implies` r -> "(" ++ prettyShow l ++ " → " ++ prettyShow r ++ ")"
+  AssumptionBlock s ss -> unlines $ map (("| " ++ ) . prettyShow) (s:ss)
+  Variable c -> [c]
+  Bottom -> "⊥"
+
 -- | Check if applying the law to the current set of statements is syntactically valid.
 --   Does not check if it holds logically
 checkStatement :: [Statement] -> Law -> Maybe Statement
@@ -153,8 +179,10 @@ checkStatement ss = \case
     case ss !! x of
       _ `And` r -> Just r
       _ -> Nothing
-  AndIntroduction x y ->
-    Just $ (ss !! x) `And` (ss !! y)
+  AndIntroduction x y -> do
+    x' <- ss !? x
+    y' <- ss !? y
+    return $ x' `And` y'
   ImplicationIntroduction x y ->
     case ss !! x of
       AssumptionBlock premise zz ->
@@ -163,28 +191,35 @@ checkStatement ss = \case
               | otherwise = last zz
           in Just $ premise `Implies` last'
       _ -> Nothing
-  DoubleNotIntroduction x ->
-    Just . Not . Not $ ss !! x
+  DoubleNotIntroduction x -> do
+    x' <- ss !? x
+    return . Not . Not $ x'
   DoubleNotElimination x ->
     case ss !! x of
       Not (Not x) -> Just x
       _ -> Nothing
-  OrEliminationLeft x y ->
-    case (ss !! x, ss !! y) of
+  OrEliminationLeft x y -> do
+    x' <- ss !? x
+    y' <- ss !? y
+    case (x', y') of
       (l `Or` _, l') ->
         if l == l'
           then Just l
           else Nothing
       _ -> Nothing
-  OrEliminationRight x y ->
-    case (ss !! x, ss !! y) of
+  OrEliminationRight x y -> do
+    x' <- ss !? x
+    y' <- ss !? y
+    case (x', y') of
       (_ `Or` r, r') ->
         if r == r'
           then Just r
           else Nothing
       _ -> Nothing
-  Contradiction x y ->
-    case (ss !! x, ss !! y) of
+  Contradiction x y -> do
+    x' <- ss !? x
+    y' <- ss !? y
+    case (x', y') of
       (x', Not y') ->
         if x' == y'
           then Just Bottom
@@ -194,14 +229,21 @@ checkStatement ss = \case
           then Just Bottom
           else Nothing
       _ -> Nothing
-  DeriveAnything l s ->
-    case ss !! l of
+  DeriveAnything l s -> do
+    l' <- ss !? l
+    case l' of
       Bottom -> Just s
       _ -> Nothing
   LEM l ->
     let l' = ss !! l
      in Just $ l' `Or` Not l'
-  -- _ -> todo
 
-check :: [Statement] -> Bool
-check = todo
+check :: Statement -> Bool
+check = \case
+  l `And` r -> check l && check r
+  l `Or` r -> check l || check r
+  Not l -> not $ check l
+  l `Implies` r -> check l --> check r
+  AssumptionBlock _ _ -> True
+  Variable _ -> True
+  Bottom -> False
