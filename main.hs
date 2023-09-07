@@ -2,8 +2,8 @@
 
 module Main where
 
-import Prelude hiding (last)
 import qualified Data.Maybe as Maybe
+import qualified Data.List as List
 
 main :: IO ()
 main = putStrLn "Hello"
@@ -40,10 +40,6 @@ data Statement
   | AssumptionBlock Statement [Statement]
   deriving (Show, Eq)
 
-last :: [a] -> Maybe a
-last [] = Nothing
-last xs = Just . head . reverse $ xs
-
 -- | Check if applying the law to the current set of statements is syntactically valid.
 --   Does not check if it holds logically
 checkStatement :: [Statement] -> Law -> Maybe Statement
@@ -61,7 +57,9 @@ checkStatement ss = \case
   ImplicationIntroduction x y ->
     case ss !! x of
       AssumptionBlock premise zz ->
-        let last' = Maybe.fromMaybe premise (last zz)
+        let last'
+              | List.null zz = premise
+              | otherwise = last zz
           in Just $ premise `Implies` last'
       _ -> Nothing
   DoubleNotIntroduction x -> Just . Not . Not $ ss !! x
