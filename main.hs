@@ -246,6 +246,6 @@ check =
     l `Or` r -> check l || check r
     Not l -> not $ check l
     l `Implies` r -> check l --> check r
-    AssumptionBlock _ _ -> True
+    AssumptionBlock _ _ -> todo
     Variable _ -> True
     Bottom -> False
