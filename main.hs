@@ -147,13 +147,15 @@ parse = todo
 prettyShow :: Statement -> String
 prettyShow =
   \case
-    l `And` r -> "(" ++ prettyShow l ++ " Λ " ++ prettyShow r ++ ")"
-    l `Or` r -> "(" ++ prettyShow l ++ " V " ++ prettyShow r ++ ")"
+    l `And` r -> wrap $ prettyShow l ++ " Λ " ++ prettyShow r
+    l `Or` r -> wrap $ prettyShow l ++ " V " ++ prettyShow r
     Not l -> "¬" ++ prettyShow l
-    l `Implies` r -> "(" ++ prettyShow l ++ " → " ++ prettyShow r ++ ")"
+    l `Implies` r -> wrap $ prettyShow l ++ " → " ++ prettyShow r
     AssumptionBlock s ss -> unlines $ map (("| " ++) . prettyShow) (s : ss)
     Variable c -> [c]
     Bottom -> "⊥"
+  where
+    wrap s = "(" ++ s ++ ")"
 
 -- | Check if applying the law to the current set of statements is syntactically valid.
 --   Does not check if it holds logically
