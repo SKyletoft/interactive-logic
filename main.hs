@@ -160,20 +160,23 @@ prettyShow =
 checkStatement :: [Statement] -> Law -> Maybe Statement
 checkStatement ss =
   \case
-    AndEliminationLeft x ->
-      case ss !! x of
+    AndEliminationLeft x -> do
+      x' <- ss !? x
+      case x' of
         l `And` _ -> Just l
         _         -> Nothing
-    AndEliminationRight x ->
-      case ss !! x of
+    AndEliminationRight x -> do
+      x' <- ss !? x
+      case x' of
         _ `And` r -> Just r
         _         -> Nothing
     AndIntroduction x y -> do
       x' <- ss !? x
       y' <- ss !? y
       return $ x' `And` y'
-    ImplicationIntroduction x y ->
-      case ss !! x of
+    ImplicationIntroduction x y -> do
+      x' <- ss !? x
+      case x' of
         AssumptionBlock premise zz ->
           let last'
                 | List.null zz = premise
@@ -223,9 +226,9 @@ checkStatement ss =
       case l' of
         Bottom -> Just s
         _      -> Nothing
-    LEM l ->
-      let l' = ss !! l
-       in Just $ l' `Or` Not l'
+    LEM l -> do
+      l' <- ss !? l
+      Just $ l' `Or` Not l'
 
 check :: Statement -> Bool
 check =
