@@ -129,6 +129,7 @@ data Law
   | DoubleNotIntroduction Int
   | DoubleNotElimination Int
   | ModusTollens Int Int
+  | Premise Statement
   deriving (Show, Eq)
 
 data Statement
@@ -231,6 +232,7 @@ checkStatement ss =
     LEM l -> do
       l' <- ss !? l
       Just $ l' `Or` Not l'
+    Premise s -> Just s
 
 check :: Statement -> Bool
 check =
