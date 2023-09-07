@@ -234,6 +234,11 @@ checkStatement ss =
       Just $ l' `Or` Not l'
     Premise s -> Just s
 
+data Result
+  = Valid
+  | Contradictory
+  | Variable
+
 check :: Statement -> Bool
 check =
   \case
