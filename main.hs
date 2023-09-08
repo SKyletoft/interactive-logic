@@ -14,7 +14,7 @@ import qualified GHC.IO.Handle.FD (stdout)
 import           Prelude          hiding (getChar, putStr, putStrLn)
 import qualified Prelude
 
---------------------- OPERATORS ----------------------
+----------------------------- OPERATORS -----------------------------
 -- Copied from Data.List.Extra
 (!?) :: [a] -> Int -> Maybe a
 [] !? _     = Nothing
@@ -25,7 +25,7 @@ import qualified Prelude
 True --> False = False
 _ --> _        = True
 
--------------------- IO WRAPPERS ---------------------
+---------------------------- IO WRAPPERS ----------------------------
 getChar :: IO Char
 getChar = do
   Termios.setupTerminal
@@ -43,11 +43,11 @@ putStrLn s = do
   Prelude.putStrLn s
   GHC.IO.Handle.hFlush GHC.IO.Handle.FD.stdout
 
---------------------- HELPERS ------------------------
+------------------------------ HELPERS ------------------------------
 todo :: a
 todo = error "TODO"
 
---------------------- ACTUAL CODE --------------------
+---------------------------- ACTUAL CODE ----------------------------
 main :: IO ()
 main = repl []
 
