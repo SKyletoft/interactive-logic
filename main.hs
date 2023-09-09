@@ -5,6 +5,8 @@ module Main where
 
 import qualified FFI.Termios      as Termios
 
+import qualified Control.Monad    as Monad
+
 import qualified Data.List        as List
 import qualified Data.Maybe       as Maybe
 
@@ -47,33 +49,39 @@ putStrLn s = do
 todo :: a
 todo = error "TODO"
 
+first :: (a -> b) -> (a, c) -> (b, c)
+first f (x, y) = (f x, y)
+
 ---------------------------- ACTUAL CODE ----------------------------
 main :: IO ()
-main = repl []
+main = repl True []
 
-repl :: [Statement] -> IO ()
-repl ss = do
-  putStrLn . unlines . map prettyShow $ ss
-  putStrLn $
-    if check $ last ss
-      then "Valid"
-      else "Contradiction"
+repl :: Bool -> [(Statement, Law)] -> IO ()
+repl skipBackLog ss = do
+  Monad.unless skipBackLog $
+    putStrLn . unlines . map (("| " ++) . showLine) $ ss
+  -- putStrLn $
+  --   if check . fst . last $ ss
+  --     then "Valid"
+  --     else "Contradiction"
   law <- parseLaw
   if Maybe.isNothing law
     then do
-      putStrLn "Bad input"
-      repl ss
+      putStr " Bad input\r"
+      repl True ss
     else do
-      let s = checkStatement ss (Maybe.fromJust law)
+      let law' = Maybe.fromJust law
+      let s = checkStatement (map fst ss) law'
       if Maybe.isNothing s
         then do
-          putStrLn "Bad law"
-          repl ss
-        else repl (ss ++ [Maybe.fromJust s])
+          putStr "Invalid application of rule\r"
+          repl True ss
+        else repl False (ss ++ [(Maybe.fromJust s, law')])
 
 parseLaw :: IO (Maybe Law)
 parseLaw = do
   c <- getChar
+  putStr $ replicate 50 ' ' ++ "\r"
   case c of
     'a' -> do
       putStr "Λ"
@@ -88,6 +96,44 @@ parseLaw = do
         'i' -> do
           putStrLn "i"
           fmap Just $ AndIntroduction <$> readLn <*> readLn
+        _ -> do
+          putStrLn " | Error"
+          return Nothing
+    'c' -> do
+      putStr "Contradiction:"
+      fmap Just $ Contradiction <$> readLn <*> readLn
+    'i' -> do
+      putStr "→"
+      c2 <- getChar
+      case c2 of
+        'i' -> do
+          putStrLn "i"
+          fmap Just $ ImplicationIntroduction <$> readLn <*> readLn
+        'e' -> do
+          putStrLn "e"
+          fmap Just $ ImplicationElimination <$> readLn <*> readLn
+        _ -> do
+          putStrLn " | Error"
+          return Nothing
+    'l' -> do
+      putStr "LEM: "
+      fmap (Just . LEM) readLn
+    'm' -> do
+      putStr "MT"
+      fmap Just $ ModusTollens <$> readLn <*> readLn
+    'n' -> do
+      putStr "¬"
+      c2 <- getChar
+      case c2 of
+        'i' -> do
+          putStrLn "i"
+          fmap Just $ NotIntroduction <$> readLn <*> readLn
+        'e' -> do
+          putStrLn "e"
+          fmap Just $ NotElimination <$> readLn <*> readLn
+        'b' -> do
+          putStrLn "b"
+          return $ Just NotBottom
         _ -> do
           putStrLn " | Error"
           return Nothing
@@ -107,29 +153,35 @@ parseLaw = do
         _ -> do
           putStrLn " | Error"
           return Nothing
+    'p' -> do
+      putStr "Premise: "
+      fmap (Just . Premise) readLn
+    's' -> do
+      error "assumptions hard"
     _ -> do
-      print . fromEnum $ c
+      putStr . show . fromEnum $ c
       return Nothing
 
 data Law
   = AndEliminationLeft Int
   | AndEliminationRight Int
   | AndIntroduction Int Int
-  | OrEliminationLeft Int Int
-  | OrEliminationRight Int Int
-  | OrIntroduction Int Int
-  | LEM Int
+  | Contradiction Int Int
+  | DeriveAnything Int Statement
+  | DoubleNotIntroduction Int
+  | DoubleNotElimination Int
   | ImplicationElimination Int Int
   | ImplicationIntroduction Int Int
+  | LEM Int
+  | ModusTollens Int Int
   | NotIntroduction Int Int
   | NotElimination Int Int
   | NotBottom
-  | DeriveAnything Int Statement
-  | Contradiction Int Int
-  | DoubleNotIntroduction Int
-  | DoubleNotElimination Int
-  | ModusTollens Int Int
+  | OrEliminationLeft Int Int
+  | OrEliminationRight Int Int
+  | OrIntroduction Int Int
   | Premise Statement
+  | Print Int
   deriving (Show, Eq)
 
 data Statement
@@ -140,10 +192,10 @@ data Statement
   | AssumptionBlock Statement [Statement]
   | Variable Char
   | Bottom
-  deriving (Show, Eq)
+  deriving (Show, Read, Eq)
 
-parse :: String -> Statement
-parse = todo
+parseStatement :: String -> Statement
+parseStatement = todo
 
 prettyShow :: Statement -> String
 prettyShow =
@@ -158,8 +210,38 @@ prettyShow =
   where
     wrap s = "(" ++ s ++ ")"
 
+prettyShowLaw :: Law -> String
+prettyShowLaw =
+  \case
+    AndEliminationLeft x -> "Λel " ++ show x
+    AndEliminationRight x -> "Λer " ++ show x
+    AndIntroduction x y -> "Λi " ++ show x ++ ", " ++ show y
+  -- Contradiction Int Int
+  -- DeriveAnything Int Statement
+  -- DoubleNotIntroduction Int
+  -- DoubleNotElimination Int
+    ImplicationElimination x y -> "→e " ++ show x ++ ", " ++ show y
+  -- ImplicationIntroduction Int Int
+    LEM x -> "LEM " ++ show x
+  -- ModusTollens Int Int
+  -- NotIntroduction Int Int
+  -- NotElimination Int Int
+  -- NotBottom
+  -- OrEliminationLeft Int Int
+  -- OrEliminationRight Int Int
+  -- OrIntroduction Int Int
+    Premise _ -> "Premise"
+  -- Print Int
+
+showLine :: (Statement, Law) -> String
+showLine (s, l) =
+  let s' = prettyShow s
+      l' = prettyShowLaw l
+      padding = replicate (40 - length s') ' '
+   in s' ++ padding ++ l'
+
 -- | Check if applying the law to the current set of statements is syntactically valid.
---   Does not check if it holds logically
+--   Does not check if it holds ally
 checkStatement :: [Statement] -> Law -> Maybe Statement
 checkStatement ss =
   \case
@@ -233,11 +315,20 @@ checkStatement ss =
       l' <- ss !? l
       Just $ l' `Or` Not l'
     Premise s -> Just s
-
-data Result
-  = Valid
-  | Contradictory
-  | Variable
+    ImplicationElimination l r -> do
+      l' <- ss !? l
+      r' <- ss !? r
+      case (l', r') of
+        (x, x' `Implies` y) ->
+          if x == x'
+            then Just y
+            else Nothing
+        (x' `Implies` y, x) ->
+          if x == x'
+            then Just y
+            else Nothing
+        _ -> Nothing
+    NotBottom -> return . Not . Not $ Bottom
 
 check :: Statement -> Bool
 check =
