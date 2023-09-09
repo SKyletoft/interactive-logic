@@ -88,10 +88,10 @@ parseLaw = do
       c2 <- getChar
       case c2 of
         'l' -> do
-          putStrLn "e1"
+          putStr "e1: "
           fmap (Just . AndEliminationLeft) readLn
         'r' -> do
-          putStrLn "e2"
+          putStr "e2: "
           fmap (Just . AndEliminationRight) readLn
         'i' -> do
           putStrLn "i"
@@ -100,7 +100,7 @@ parseLaw = do
           putStrLn " | Error"
           return Nothing
     'c' -> do
-      putStr "Contradiction:"
+      putStrLn "Contradiction:"
       fmap Just $ Contradiction <$> readLn <*> readLn
     'i' -> do
       putStr "→"
@@ -119,7 +119,7 @@ parseLaw = do
       putStr "LEM: "
       fmap (Just . LEM) readLn
     'm' -> do
-      putStr "MT"
+      putStrLn "MT"
       fmap Just $ ModusTollens <$> readLn <*> readLn
     'n' -> do
       putStr "¬"
@@ -158,6 +158,11 @@ parseLaw = do
       fmap (Just . Premise) readLn
     's' -> do
       error "assumptions hard"
+    '\127' -> do
+      putStrLn "hi"
+      return Nothing
+    '\4' -> do
+      error "Exit"
     _ -> do
       putStr . show . fromEnum $ c
       return Nothing
@@ -181,7 +186,6 @@ data Law
   | OrEliminationRight Int Int
   | OrIntroduction Int Int
   | Premise Statement
-  | Print Int
   deriving (Show, Eq)
 
 data Statement
@@ -216,7 +220,7 @@ prettyShowLaw =
     AndEliminationLeft x -> "Λel " ++ show x
     AndEliminationRight x -> "Λer " ++ show x
     AndIntroduction x y -> "Λi " ++ show x ++ ", " ++ show y
-  -- Contradiction Int Int
+    Contradiction x y -> "⊥ " ++ show x ++ ", " ++ show y
   -- DeriveAnything Int Statement
   -- DoubleNotIntroduction Int
   -- DoubleNotElimination Int
@@ -231,7 +235,6 @@ prettyShowLaw =
   -- OrEliminationRight Int Int
   -- OrIntroduction Int Int
     Premise _ -> "Premise"
-  -- Print Int
 
 showLine :: (Statement, Law) -> String
 showLine (s, l) =
