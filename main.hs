@@ -185,11 +185,11 @@ parseLaw = do
           return Nothing
     'p' -> do
       putStr "Premise: "
-      fmap (Just . Premise) readLn
+      fmap (Just . Premise) parseLn
     'q' -> return $ Just Quit
     's' -> do
       putStr "Assumption: "
-      fmap (Just . AssumptionIntroduction) readLn
+      fmap (Just . AssumptionIntroduction) parseLn
     '\127' -> do
       putStr "\r                             \r"
       return Nothing
@@ -221,7 +221,7 @@ data Law
   | Premise Statement
   | Quit
   | FillerL
-  deriving (Show, Read, Eq)
+  deriving (Show, Eq)
 
 data Statement
   = And Statement Statement
@@ -232,7 +232,7 @@ data Statement
   | Variable Char
   | Bottom
   | FillerS
-  deriving (Show, Read, Eq)
+  deriving (Show, Eq)
 
 convert :: Exp -> Statement
 convert = \case
