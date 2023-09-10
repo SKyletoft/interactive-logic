@@ -228,7 +228,7 @@ data Statement
   | Not Statement
   | Implies Statement Statement
   | AssumptionBlock Statement [(Statement, Law)]
-  | Variable Char
+  | Variable String
   | Bottom
   | FillerS
   deriving (Read, Show, Eq)
@@ -241,8 +241,7 @@ convert =
     EOr l r -> Or (convert l) (convert r)
     EImpl l r -> Implies (convert l) (convert r)
     ENot e -> Not (convert e)
-    EVar (Abs.Ident [n]) -> Variable n
-    EVar _ -> error "Stick to one letter variables"
+    EVar (Abs.Ident n) -> Variable n
 
 parseStatement :: String -> Statement
 parseStatement s =
@@ -265,7 +264,7 @@ prettyShow = unwrap . prettyShow'
         Not l -> "¬" ++ prettyShow' l
         l `Implies` r -> wrap $ prettyShow' l ++ " → " ++ prettyShow' r
         AssumptionBlock _ ss -> "[]"
-        Variable c -> [c]
+        Variable c -> c
         Bottom -> "⊥"
         FillerS -> "(Ignore me)"
 
