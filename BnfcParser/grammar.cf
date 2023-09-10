@@ -1,2 +1,10 @@
-EInt.  Exp ::= Integer;
-EPlus. Exp ::= Exp "+" Integer;
+EBtm.  Exp ::= "T";
+
+EPar.  Exp ::= "(" Exp ")";
+EVar.  Exp ::= Ident;
+EAnd.  Exp ::= Exp "&" Exp;
+EOr.   Exp ::= Exp "|" Exp;
+EImpl. Exp ::= Exp "→" Exp;
+EImpl. Exp ::= Exp "->" Exp;
+ENot.  Exp ::= "¬" Exp;
+ENot.  Exp ::= "!" Exp;

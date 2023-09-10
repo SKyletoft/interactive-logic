@@ -18,6 +18,7 @@ import qualified Prelude
 
 import qualified Grammar.Par as Par
 import qualified Grammar.Abs as Abs
+import Grammar.Abs (Exp(..))
 
 ----------------------------- OPERATORS -----------------------------
 -- Copied from Data.List.Extra
@@ -229,8 +230,22 @@ data Statement
   | FillerS
   deriving (Show, Read, Eq)
 
+convert :: Exp -> Statement
+convert = \case
+  EPar e -> convert e
+  EBtm -> Bottom
+  EAnd l r -> And (convert l) (convert r)
+  EOr l r -> Or (convert l) (convert r)
+  EImpl l r -> Implies (convert l) (convert r)
+  ENot e -> Not (convert e)
+  EVar (Abs.Ident [n]) -> Variable n
+  EVar _ -> error "Stick to one letter variables"
+  e -> error . show $ e
+
 parseStatement :: String -> Statement
-parseStatement = todo
+parseStatement s = convert bnfcOut
+  where
+    Right bnfcOut = Par.pExp $ Par.myLexer s
 
 prettyShow :: Statement -> String
 prettyShow =

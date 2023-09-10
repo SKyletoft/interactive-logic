@@ -1,6 +1,8 @@
 Main: main.hs termops.o Grammar/Par.hs
 	ghc main.hs -g termops.o -o Main
 
+Grammar/Abs.hs: Grammar/Par.hs
+
 Grammar/Par.hs: BnfcParser/grammar.cf
 	cd BnfcParser && bnfc -d -m grammar.cf && make -j
 	mv BnfcParser/Grammar .
