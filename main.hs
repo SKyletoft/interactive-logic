@@ -284,7 +284,7 @@ prettyShowLaw =
     ImplicationElimination x y -> "→e " ++ show x ++ ", " ++ show y
     ImplicationIntroduction x -> "→i" ++ show x
     LEM x -> "LEM " ++ show x
-  -- ModusTollens Int Int
+    ModusTollens x y -> "MT " ++ show x ++ ", " ++ show y
   -- NotIntroduction Int Int
   -- NotElimination Int Int
   -- NotBottom
@@ -400,6 +400,19 @@ checkStatement ss =
         (x' `Implies` y, x) ->
           if x == x'
             then Just y
+            else Nothing
+        _ -> Nothing
+    ModusTollens l r -> do
+      l' <- ss !? l
+      r' <- ss !? r
+      case (l', r') of
+        (x `Implies` y, Not y') ->
+          if y == y'
+            then Just $ Not x
+            else Nothing
+        (Not y', x `Implies` y) ->
+          if y == y'
+            then Just $ Not x
             else Nothing
         _ -> Nothing
     NotBottom -> return . Not . Not $ Bottom
