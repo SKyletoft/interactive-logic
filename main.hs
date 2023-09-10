@@ -234,15 +234,15 @@ data Statement
   deriving (Read, Show, Eq)
 
 convert :: Exp -> Statement
-convert = \case
-  EPar e -> convert e
-  EBtm -> Bottom
-  EAnd l r -> And (convert l) (convert r)
-  EOr l r -> Or (convert l) (convert r)
-  EImpl l r -> Implies (convert l) (convert r)
-  ENot e -> Not (convert e)
-  EVar (Abs.Ident [n]) -> Variable n
-  EVar _ -> error "Stick to one letter variables"
+convert =
+  \case
+    EBtm -> Bottom
+    EAnd l r -> And (convert l) (convert r)
+    EOr l r -> Or (convert l) (convert r)
+    EImpl l r -> Implies (convert l) (convert r)
+    ENot e -> Not (convert e)
+    EVar (Abs.Ident [n]) -> Variable n
+    EVar _ -> error "Stick to one letter variables"
 
 parseStatement :: String -> Statement
 parseStatement s = convert bnfcOut
