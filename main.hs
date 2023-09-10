@@ -245,12 +245,10 @@ convert =
     EVar _ -> error "Stick to one letter variables"
 
 parseStatement :: String -> Statement
-parseStatement s = convert bnfcOut
-  where
-    bnfcOut =
-      case Par.pExp . Par.myLexer $ s of
-        Right res -> res
-        Left _    -> read s
+parseStatement s =
+  case Par.pExp . Par.myLexer $ s of
+    Right res -> convert res
+    Left _    -> read s
 
 prettyShow :: Statement -> String
 prettyShow = unwrap . prettyShow'
