@@ -12,6 +12,19 @@
 				pkgs = nixpkgs.legacyPackages.${system};
 				lib = nixpkgs.lib;
 			in rec {
+				packages.default = pkgs.stdenv.mkDerivation {
+					pname = "logic-edit";
+					version = "0.0.1";
+					src = ./.;
+
+					nativeBuildInputs = with pkgs; [ ghc ];
+
+					installPhase = ''
+						mkdir -p $out/bin
+						cp Main $out/bin/logic-edit
+					'';
+				};
+
 				devShells.default = pkgs.mkShell {
 					nativeBuildInputs = with pkgs; [
 						haskellPackages.haskell-language-server
