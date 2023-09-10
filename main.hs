@@ -32,6 +32,10 @@ True --> False = False
 _ --> _        = True
 
 ---------------------------- IO WRAPPERS ----------------------------
+
+parseLn :: IO Statement
+parseLn = fmap parseStatement getLine
+
 getChar :: IO Char
 getChar = do
   Termios.setupTerminal
