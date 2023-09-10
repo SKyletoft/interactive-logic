@@ -221,7 +221,7 @@ data Law
   | Premise Statement
   | Quit
   | FillerL
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 
 data Statement
   = And Statement Statement
@@ -232,7 +232,7 @@ data Statement
   | Variable Char
   | Bottom
   | FillerS
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 
 convert :: Exp -> Statement
 convert = \case
@@ -248,7 +248,9 @@ convert = \case
 parseStatement :: String -> Statement
 parseStatement s = convert bnfcOut
   where
-    Right bnfcOut = Par.pExp $ Par.myLexer s
+    bnfcOut = case Par.pExp . Par.myLexer $ s of
+      Right res -> res
+      Left _ -> read s
 
 prettyShow :: Statement -> String
 prettyShow =
