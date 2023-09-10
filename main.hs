@@ -253,18 +253,23 @@ parseStatement s = convert bnfcOut
         Left _    -> read s
 
 prettyShow :: Statement -> String
-prettyShow =
-  \case
-    l `And` r -> wrap $ prettyShow l ++ " Λ " ++ prettyShow r
-    l `Or` r -> wrap $ prettyShow l ++ " V " ++ prettyShow r
-    Not l -> "¬" ++ prettyShow l
-    l `Implies` r -> wrap $ prettyShow l ++ " → " ++ prettyShow r
-    AssumptionBlock _ ss -> "[]"
-    Variable c -> [c]
-    Bottom -> "⊥"
-    FillerS -> "(Ignore me)"
+prettyShow = unwrap . prettyShow'
   where
+    unwrap [] = []
+    unwrap s
+      | head s == '(' && last s == ')' = init . tail $ s
+      | otherwise = s
     wrap s = "(" ++ s ++ ")"
+    prettyShow' =
+      \case
+        l `And` r -> wrap $ prettyShow' l ++ " Λ " ++ prettyShow' r
+        l `Or` r -> wrap $ prettyShow' l ++ " V " ++ prettyShow' r
+        Not l -> "¬" ++ prettyShow' l
+        l `Implies` r -> wrap $ prettyShow' l ++ " → " ++ prettyShow' r
+        AssumptionBlock _ ss -> "[]"
+        Variable c -> [c]
+        Bottom -> "⊥"
+        FillerS -> "(Ignore me)"
 
 prettyShowLaw :: Law -> String
 prettyShowLaw =
