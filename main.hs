@@ -49,9 +49,6 @@ putStrLn s = do
   Prelude.putStrLn s
   GHC.IO.Handle.hFlush GHC.IO.Handle.FD.stdout
 
-parseLn :: IO Statement
-parseLn = fmap getLine parseStatement
-
 ------------------------------ HELPERS ------------------------------
 todo :: a
 todo = error "TODO"
@@ -118,19 +115,19 @@ parseLaw = do
       case c2 of
         'l' -> do
           putStr "e1: "
-          fmap (Just . AndEliminationLeft) parseLn
+          fmap (Just . AndEliminationLeft) readLn
         'r' -> do
           putStr "e2: "
-          fmap (Just . AndEliminationRight) parseLn
+          fmap (Just . AndEliminationRight) readLn
         'i' -> do
           putStrLn "i"
-          fmap Just $ AndIntroduction <$> parseLn <*> parseLn
+          fmap Just $ AndIntroduction <$> readLn <*> readLn
         _ -> do
           putStrLn " | Error"
           return Nothing
     'c' -> do
       putStrLn "Contradiction:"
-      fmap Just $ Contradiction <$> parseLn <*> parseLn
+      fmap Just $ Contradiction <$> readLn <*> readLn
     'i' -> do
       putStr "→"
       c2 <- getChar
@@ -140,26 +137,26 @@ parseLaw = do
           return $ Just (ImplicationIntroduction 0)
         'e' -> do
           putStrLn "e"
-          fmap Just $ ImplicationElimination <$> parseLn <*> parseLn
+          fmap Just $ ImplicationElimination <$> readLn <*> readLn
         _ -> do
           putStrLn " | Error"
           return Nothing
     'l' -> do
       putStr "LEM: "
-      fmap (Just . LEM) parseLn
+      fmap (Just . LEM) readLn
     'm' -> do
       putStrLn "MT"
-      fmap Just $ ModusTollens <$> parseLn <*> parseLn
+      fmap Just $ ModusTollens <$> readLn <*> readLn
     'n' -> do
       putStr "¬"
       c2 <- getChar
       case c2 of
         'i' -> do
           putStrLn "i"
-          fmap Just $ NotIntroduction <$> parseLn
+          fmap Just $ NotIntroduction <$> readLn
         'e' -> do
           putStrLn "e"
-          fmap Just $ NotElimination <$> parseLn <*> parseLn
+          fmap Just $ NotElimination <$> readLn <*> readLn
         'b' -> do
           putStrLn "b"
           return $ Just NotBottom
@@ -172,23 +169,23 @@ parseLaw = do
       case c2 of
         'l' -> do
           putStrLn "e1"
-          fmap Just $ OrEliminationLeft <$> parseLn <*> parseLn
+          fmap Just $ OrEliminationLeft <$> readLn <*> readLn
         'r' -> do
           putStrLn "e2"
-          fmap Just $ OrEliminationRight <$> parseLn <*> parseLn
+          fmap Just $ OrEliminationRight <$> readLn <*> readLn
         'i' -> do
           putStrLn "i"
-          fmap Just $ OrIntroduction <$> parseLn <*> parseLn
+          fmap Just $ OrIntroduction <$> readLn <*> readLn
         _ -> do
           putStrLn " | Error"
           return Nothing
     'p' -> do
-      putStr ": "
-      fmap (Just . ) (fmap parseStatement getLine)
+      putStr "Premise: "
+      fmap (Just . Premise) readLn
     'q' -> return $ Just Quit
     's' -> do
       putStr "Assumption: "
-      fmap (Just . AssumptionIntroduction) parseLn
+      fmap (Just . AssumptionIntroduction) readLn
     '\127' -> do
       putStr "\r                             \r"
       return Nothing
@@ -217,7 +214,7 @@ data Law
   | OrEliminationLeft Int Int
   | OrEliminationRight Int Int
   | OrIntroduction Int Int
-  |  Statement
+  | Premise Statement
   | Quit
   | FillerL
   deriving (Show, Read, Eq)
@@ -284,7 +281,7 @@ prettyShowLaw =
   -- OrEliminationLeft Int Int
   -- OrEliminationRight Int Int
   -- OrIntroduction Int Int
-     _ -> "Premise"
+    Premise _ -> "Premise"
     AssumptionIntroduction _ -> "Assumption"
     NotIntroduction x -> "Syntax change " ++ show x
     FillerL -> "(Ignore me)"
@@ -379,7 +376,7 @@ checkStatement ss =
     LEM l -> do
       l' <- ss !? l
       Just $ l' `Or` Not l'
-     s -> Just s
+    Premise s -> Just s
     ImplicationIntroduction _ -> do
       error "hi"
     ImplicationElimination l r -> do
