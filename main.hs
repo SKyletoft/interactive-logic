@@ -16,9 +16,9 @@ import qualified GHC.IO.Handle.FD (stdout)
 import           Prelude          hiding (getChar, putStr, putStrLn)
 import qualified Prelude
 
-import qualified Grammar.Par as Par
-import qualified Grammar.Abs as Abs
-import Grammar.Abs (Exp(..))
+import           Grammar.Abs      (Exp (..))
+import qualified Grammar.Abs      as Abs
+import qualified Grammar.Par      as Par
 
 ----------------------------- OPERATORS -----------------------------
 -- Copied from Data.List.Extra
@@ -32,7 +32,6 @@ True --> False = False
 _ --> _        = True
 
 ---------------------------- IO WRAPPERS ----------------------------
-
 parseLn :: IO Statement
 parseLn = fmap parseStatement getLine
 
@@ -248,9 +247,10 @@ convert = \case
 parseStatement :: String -> Statement
 parseStatement s = convert bnfcOut
   where
-    bnfcOut = case Par.pExp . Par.myLexer $ s of
-      Right res -> res
-      Left _ -> read s
+    bnfcOut =
+      case Par.pExp . Par.myLexer $ s of
+        Right res -> res
+        Left _    -> read s
 
 prettyShow :: Statement -> String
 prettyShow =
