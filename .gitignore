@@ -3,3 +3,6 @@ build
 *.o
 *.hi
 Main
+BnfcParser/Grammar
+BnfcParser/Makefile
+Grammar

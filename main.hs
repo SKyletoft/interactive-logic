@@ -16,6 +16,9 @@ import qualified GHC.IO.Handle.FD (stdout)
 import           Prelude          hiding (getChar, putStr, putStrLn)
 import qualified Prelude
 
+import qualified Grammar.Par as Par
+import qualified Grammar.Abs as Abs
+
 ----------------------------- OPERATORS -----------------------------
 -- Copied from Data.List.Extra
 (!?) :: [a] -> Int -> Maybe a

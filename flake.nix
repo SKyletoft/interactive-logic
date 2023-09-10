@@ -17,7 +17,12 @@
 					version = "0.0.1";
 					src = ./.;
 
-					nativeBuildInputs = with pkgs; [ ghc ];
+					nativeBuildInputs = with pkgs; [
+						ghc
+						haskellPackages.BNFC
+						haskellPackages.alex
+						haskellPackages.happy
+					];
 
 					installPhase = ''
 						mkdir -p $out/bin
@@ -31,6 +36,9 @@
 						haskellPackages.ghc
 						haskellPackages.stylish-haskell
 						haskellPackages.hindent
+						haskellPackages.BNFC
+						haskellPackages.alex
+						haskellPackages.happy
 						idris2
 						gnumake
 					];
