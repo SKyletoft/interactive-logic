@@ -26,7 +26,7 @@
 
 					installPhase = ''
 						mkdir -p $out/bin
-						cp Main $out/bin/logic-edit
+						cp Main-opt $out/bin/logic-edit
 					'';
 				};
 

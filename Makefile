@@ -1,3 +1,6 @@
+Main-opt: main.hs termops.o Grammar/Par.hs
+	ghc -O3 main.hs -g termops.o -o Main-opt
+
 Main: main.hs termops.o Grammar/Par.hs
 	ghc main.hs -g termops.o -o Main
 
