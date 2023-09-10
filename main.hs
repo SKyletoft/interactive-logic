@@ -54,29 +54,51 @@ first f (x, y) = (f x, y)
 
 ---------------------------- ACTUAL CODE ----------------------------
 main :: IO ()
-main = repl True []
+main = do
+  putStrLn "Proof editor"
+  repl True 0 []
+  return ()
 
-repl :: Bool -> [(Statement, Law)] -> IO ()
-repl skipBackLog ss = do
-  Monad.unless skipBackLog $
-    putStrLn . unlines . map (("| " ++) . showLine) $ ss
-  -- putStrLn $
-  --   if check . fst . last $ ss
-  --     then "Valid"
-  --     else "Contradiction"
+repl :: Bool -> Int -> [(Statement, Law)] -> IO [(Statement, Law)]
+repl skipBackLog startingAt ss = do
+  Monad.unless skipBackLog $ do putStrLn . display $ ss
+    -- putStrLn $
+    --   if check . fst . last $ ss
+    --     then "Valid"
+    --     else "Contradiction"
   law <- parseLaw
-  if Maybe.isNothing law
-    then do
-      putStr " Bad input\r"
-      repl True ss
-    else do
-      let law' = Maybe.fromJust law
-      let s = checkStatement (map fst ss) law'
-      if Maybe.isNothing s
+  case law of
+    Nothing -> repl True startingAt ss
+    Just Quit -> do
+      putStrLn "------------------------------------------"
+      putStrLn . display $ ss
+      print ss
+      error "Exit"
+    Just (AssumptionIntroduction s) -> do
+      assumption <-
+        repl False (length ss) (ss ++ [(s, AssumptionIntroduction s)])
+      let assumptionBlock = AssumptionBlock s assumption
+      let implication = Implies s (fst . last $ assumption)
+      repl
+        False
+        startingAt
+        (ss ++
+         replicate (length assumption - 1) (FillerS, FillerL) ++
+         [ (assumptionBlock, AssumptionIntroduction s)
+         , (implication, ImplicationIntroduction (length ss))
+         ])
+    Just (ImplicationIntroduction _) ->
+      if startingAt == 0
         then do
           putStr "Invalid application of rule\r"
-          repl True ss
-        else repl False (ss ++ [(Maybe.fromJust s, law')])
+          repl True startingAt ss
+        else return . drop startingAt $ ss
+    Just law' -> do
+      case checkStatement (map fst ss) law' of
+        Nothing -> do
+          putStr "Invalid application of rule\r"
+          repl True startingAt ss
+        Just s' -> repl False startingAt (ss ++ [(s', law')])
 
 parseLaw :: IO (Maybe Law)
 parseLaw = do
@@ -108,7 +130,7 @@ parseLaw = do
       case c2 of
         'i' -> do
           putStrLn "i"
-          fmap Just $ ImplicationIntroduction <$> readLn <*> readLn
+          return $ Just (ImplicationIntroduction 0)
         'e' -> do
           putStrLn "e"
           fmap Just $ ImplicationElimination <$> readLn <*> readLn
@@ -127,7 +149,7 @@ parseLaw = do
       case c2 of
         'i' -> do
           putStrLn "i"
-          fmap Just $ NotIntroduction <$> readLn <*> readLn
+          fmap Just $ NotIntroduction <$> readLn
         'e' -> do
           putStrLn "e"
           fmap Just $ NotElimination <$> readLn <*> readLn
@@ -156,10 +178,12 @@ parseLaw = do
     'p' -> do
       putStr "Premise: "
       fmap (Just . Premise) readLn
+    'q' -> return $ Just Quit
     's' -> do
-      error "assumptions hard"
+      putStr "Assumption: "
+      fmap (Just . AssumptionIntroduction) readLn
     '\127' -> do
-      putStrLn "hi"
+      putStr "\r                             \r"
       return Nothing
     '\4' -> do
       error "Exit"
@@ -171,31 +195,35 @@ data Law
   = AndEliminationLeft Int
   | AndEliminationRight Int
   | AndIntroduction Int Int
+  | AssumptionIntroduction Statement
   | Contradiction Int Int
   | DeriveAnything Int Statement
   | DoubleNotIntroduction Int
   | DoubleNotElimination Int
   | ImplicationElimination Int Int
-  | ImplicationIntroduction Int Int
+  | ImplicationIntroduction Int
   | LEM Int
   | ModusTollens Int Int
-  | NotIntroduction Int Int
+  | NotIntroduction Int
   | NotElimination Int Int
   | NotBottom
   | OrEliminationLeft Int Int
   | OrEliminationRight Int Int
   | OrIntroduction Int Int
   | Premise Statement
-  deriving (Show, Eq)
+  | Quit
+  | FillerL
+  deriving (Show, Read, Eq)
 
 data Statement
   = And Statement Statement
   | Or Statement Statement
   | Not Statement
   | Implies Statement Statement
-  | AssumptionBlock Statement [Statement]
+  | AssumptionBlock Statement [(Statement, Law)]
   | Variable Char
   | Bottom
+  | FillerS
   deriving (Show, Read, Eq)
 
 parseStatement :: String -> Statement
@@ -208,9 +236,10 @@ prettyShow =
     l `Or` r -> wrap $ prettyShow l ++ " V " ++ prettyShow r
     Not l -> "¬" ++ prettyShow l
     l `Implies` r -> wrap $ prettyShow l ++ " → " ++ prettyShow r
-    AssumptionBlock s ss -> unlines $ map (("| " ++) . prettyShow) (s : ss)
+    AssumptionBlock _ ss -> "[]"
     Variable c -> [c]
     Bottom -> "⊥"
+    FillerS -> "(Ignore me)"
   where
     wrap s = "(" ++ s ++ ")"
 
@@ -225,7 +254,7 @@ prettyShowLaw =
   -- DoubleNotIntroduction Int
   -- DoubleNotElimination Int
     ImplicationElimination x y -> "→e " ++ show x ++ ", " ++ show y
-  -- ImplicationIntroduction Int Int
+    ImplicationIntroduction x -> "→i" ++ show x
     LEM x -> "LEM " ++ show x
   -- ModusTollens Int Int
   -- NotIntroduction Int Int
@@ -235,15 +264,27 @@ prettyShowLaw =
   -- OrEliminationRight Int Int
   -- OrIntroduction Int Int
     Premise _ -> "Premise"
+    AssumptionIntroduction _ -> "Assumption"
+    NotIntroduction x -> "Syntax change " ++ show x
+    FillerL -> "(Ignore me)"
+    s -> error . show $ s
 
-showLine :: (Statement, Law) -> String
-showLine (s, l) =
-  let s' = prettyShow s
-      l' = prettyShowLaw l
-      padding = replicate (40 - length s') ' '
-   in s' ++ padding ++ l'
+display :: [(Statement, Law)] -> String
+display =
+  unlines .
+  map (\(n, (a, b)) -> pad 5 (show n) ++ " | " ++ pad 30 a ++ b) .
+  zip [0 ..] . displayInner
+  where
+    pad l s = s ++ replicate (l - length s) ' '
+    doLine (s, l) =
+      case s of
+        FillerS              -> []
+        AssumptionBlock _ ss -> map (first ("| " ++)) . displayInner $ ss
+        _                    -> [(prettyShow s, prettyShowLaw l)]
+    displayInner = concatMap doLine
 
--- | Check if applying the law to the current set of statements is syntactically valid.
+-- | Check if applying the law to the current set of statements is
+--   syntactically valid.
 --   Does not check if it holds ally
 checkStatement :: [Statement] -> Law -> Maybe Statement
 checkStatement ss =
@@ -262,22 +303,22 @@ checkStatement ss =
       x' <- ss !? x
       y' <- ss !? y
       return $ x' `And` y'
-    ImplicationIntroduction x y -> do
-      x' <- ss !? x
-      case x' of
-        AssumptionBlock premise zz ->
-          let last'
-                | List.null zz = premise
-                | otherwise = last zz
-           in Just $ premise `Implies` last'
-        _ -> Nothing
+    -- ImplicationIntroduction x y -> do
+    --   x' <- ss !? x
+    --   case x' of
+    --     AssumptionBlock premise zz ->
+    --       let last'
+    --             | List.null zz = premise
+    --             | otherwise = last zz
+    --        in Just $ premise `Implies` last'
+    --     _ -> Nothing
     DoubleNotIntroduction x -> do
       x' <- ss !? x
       return . Not . Not $ x'
     DoubleNotElimination x ->
-      case ss !! x of
-        Not (Not x) -> Just x
-        _           -> Nothing
+      case ss !? x of
+        Just (Not (Not x)) -> Just x
+        _                  -> Nothing
     OrEliminationLeft x y -> do
       x' <- ss !? x
       y' <- ss !? y
@@ -318,6 +359,8 @@ checkStatement ss =
       l' <- ss !? l
       Just $ l' `Or` Not l'
     Premise s -> Just s
+    ImplicationIntroduction _ -> do
+      error "hi"
     ImplicationElimination l r -> do
       l' <- ss !? l
       r' <- ss !? r
@@ -332,6 +375,11 @@ checkStatement ss =
             else Nothing
         _ -> Nothing
     NotBottom -> return . Not . Not $ Bottom
+    NotIntroduction l -> do
+      case ss !? l of
+        Just (x `Implies` Bottom) -> Just $ Not x
+        _                         -> Nothing
+    s -> error . show $ s
 
 check :: Statement -> Bool
 check =
