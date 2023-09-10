@@ -240,7 +240,6 @@ convert = \case
   ENot e -> Not (convert e)
   EVar (Abs.Ident [n]) -> Variable n
   EVar _ -> error "Stick to one letter variables"
-  e -> error . show $ e
 
 parseStatement :: String -> Statement
 parseStatement s = convert bnfcOut
