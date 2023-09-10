@@ -9,6 +9,7 @@ import qualified Control.Monad    as Monad
 
 import qualified Data.List        as List
 import qualified Data.Maybe       as Maybe
+import qualified Data.Set         as Set
 
 import qualified GHC.IO.Handle    (hFlush)
 import qualified GHC.IO.Handle.FD (stdout)
@@ -19,6 +20,8 @@ import qualified Prelude
 import           Grammar.Abs      (Exp (..))
 import qualified Grammar.Abs      as Abs
 import qualified Grammar.Par      as Par
+
+type S a = Set.Set a
 
 ----------------------------- OPERATORS -----------------------------
 -- Copied from Data.List.Extra
@@ -220,7 +223,7 @@ data Law
   | Premise Statement
   | Quit
   | FillerL
-  deriving (Read, Show, Eq)
+  deriving (Read, Show, Eq, Ord)
 
 data Statement
   = And Statement Statement
@@ -231,7 +234,7 @@ data Statement
   | Variable String
   | Bottom
   | FillerS
-  deriving (Read, Show, Eq)
+  deriving (Read, Show, Eq, Ord)
 
 convert :: Exp -> Statement
 convert =
@@ -416,3 +419,23 @@ check =
     AssumptionBlock _ _ -> todo
     Variable _ -> True
     Bottom -> False
+
+------------------------------ SOLVING ------------------------------
+substatements :: Statement -> S Statement
+substatements s = Set.union (Set.singleton s) $ case s of
+  l `And` r -> Set.union (substatements l) (substatements r)
+  l `Or` r -> Set.union (substatements l) (substatements r)
+  l `Implies` r -> Set.union (substatements l) (substatements r)
+  Not l -> substatements l
+  AssumptionBlock _ _ -> Set.empty
+  Variable n -> Set.empty
+  Bottom -> Set.empty
+
+-- Obviously a very rough heuristic
+similarity :: Statement -> Statement -> Double
+similarity l r =
+  let lSet = substatements l
+      rSet = substatements r
+      all = Set.union lSet rSet
+      shared = Set.intersection lSet rSet
+   in fromIntegral (Set.size shared) / fromIntegral (Set.size all)
