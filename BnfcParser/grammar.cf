@@ -1,10 +1,15 @@
 EBtm.  Exp ::= "T";
 
-EPar.  Exp ::= "(" Exp ")";
-EVar.  Exp ::= Ident;
-EAnd.  Exp ::= Exp "&" Exp;
-EOr.   Exp ::= Exp "|" Exp;
-EImpl. Exp ::= Exp "→" Exp;
-EImpl. Exp ::= Exp "->" Exp;
-ENot.  Exp ::= "¬" Exp;
-ENot.  Exp ::= "!" Exp;
+_.     Exp2 ::= "(" Exp ")";
+EVar.  Exp2 ::= Ident;
+
+ENot.  Exp1 ::= "¬" Exp2;
+ENot.  Exp1 ::= "!" Exp2;
+
+EAnd.  Exp  ::= Exp "&" Exp;
+EOr.   Exp  ::= Exp "|" Exp;
+EImpl. Exp  ::= Exp "→" Exp;
+EImpl. Exp  ::= Exp "->" Exp;
+
+_.     Exp1 ::= Exp2;
+_.     Exp  ::= Exp1;
