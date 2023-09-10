@@ -77,7 +77,7 @@ repl skipBackLog startingAt ss = do
   case law of
     Nothing -> repl True startingAt ss
     Just Quit -> do
-      putStrLn "------------------------------------------"
+      putStrLn $ replicate 50 '-'
       putStrLn . display $ ss
       print ss
       error "Exit"
