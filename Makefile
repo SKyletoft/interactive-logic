@@ -5,6 +5,7 @@ Grammar/Abs.hs: Grammar/Par.hs
 
 Grammar/Par.hs: BnfcParser/grammar.cf
 	cd BnfcParser && bnfc -d -m grammar.cf && make -j
+	-rm Grammar -rf
 	mv BnfcParser/Grammar .
 
 termops.o: FFI/termops.c
