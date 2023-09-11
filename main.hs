@@ -17,6 +17,7 @@ import qualified GHC.IO.Handle.FD (stdout)
 import           Prelude          hiding (getChar, putStr, putStrLn)
 import qualified Prelude
 
+import           Data.Maybe       (isJust)
 import           Grammar.Abs      (Exp (..))
 import qualified Grammar.Abs      as Abs
 import qualified Grammar.Par      as Par
@@ -103,6 +104,10 @@ repl skipBackLog startingAt ss = do
           putStr "Invalid application of rule\r"
           repl True startingAt ss
         else return . drop startingAt $ ss
+    Just (Search s) -> do
+      let searchResult = bfs ((==s) . fst . last) applicableRules [ss]
+      putStrLn . display $ searchResult
+      repl False  startingAt ss
     Just law' -> do
       case checkStatement (map fst ss) law' of
         Nothing -> do
@@ -209,6 +214,9 @@ parseLaw = do
     's' -> do
       putStr "Assumption: "
       fmap (Just . AssumptionIntroduction) parseLn
+    'S' -> do
+      putStr "Search for: "
+      fmap (Just . Search) parseLn
     '\127' -> do
       putStr "\r                             \r"
       return Nothing
@@ -239,6 +247,7 @@ data Law
   | OrIntroductionLeft Int Statement
   | OrIntroductionRight Statement Int
   | Premise Statement
+  | Search Statement
   | Quit
   | FillerL
   deriving (Read, Show, Eq, Ord)
@@ -460,14 +469,16 @@ check =
 
 ------------------------------ SOLVING ------------------------------
 substatements :: Statement -> S Statement
-substatements s = Set.union (Set.singleton s) $ case s of
-  l `And` r -> Set.union (substatements l) (substatements r)
-  l `Or` r -> Set.union (substatements l) (substatements r)
-  l `Implies` r -> Set.union (substatements l) (substatements r)
-  Not l -> substatements l
-  AssumptionBlock _ _ -> Set.empty
-  Variable n -> Set.empty
-  Bottom -> Set.empty
+substatements s =
+  Set.union (Set.singleton s) $
+  case s of
+    l `And` r           -> Set.union (substatements l) (substatements r)
+    l `Or` r            -> Set.union (substatements l) (substatements r)
+    l `Implies` r       -> Set.union (substatements l) (substatements r)
+    Not l               -> substatements l
+    AssumptionBlock _ _ -> Set.empty
+    Variable n          -> Set.empty
+    Bottom              -> Set.empty
 
 -- Obviously a very rough heuristic
 similarity :: Statement -> Statement -> Double
@@ -477,3 +488,49 @@ similarity l r =
       all = Set.union lSet rSet
       shared = Set.intersection lSet rSet
    in fromIntegral (Set.size shared) / fromIntegral (Set.size all)
+
+applicableRules :: [(Statement, Law)] -> [[(Statement, Law)]]
+applicableRules ss
+  = map (\s -> ss ++ [Maybe.fromJust s])
+  . filter Maybe.isJust
+  . map (\l -> (,l) <$> checkStatement ss' l)
+  $ rules
+  where
+    ss' = map fst ss
+    singles = [0 .. length ss]
+    pairRules =
+      [ AndIntroduction
+      , Contradiction
+      , NotElimination
+      , ImplicationElimination
+      , OrEliminationLeft
+      , OrEliminationRight
+      , ModusTollens
+      ]
+    singleRules =
+      [ AndEliminationLeft
+      , AndEliminationRight
+      , DoubleNotIntroduction
+      , DoubleNotElimination
+      , ImplicationIntroduction
+      , LEM
+      , NotIntroduction
+      ]
+    singleRules' = [rule n | rule <- singleRules, n <- singles]
+    pairRules' = [rule m n | rule <- pairRules, m <- singles, n <- singles]
+    rules = singleRules' ++ pairRules'
+
+  -- For later
+  -- | OrIntroductionLeft Int Statement
+  -- | OrIntroductionRight Statement Int
+  -- | AssumptionIntroduction Statement
+  -- | DeriveAnything Int Statement
+
+bfs :: Ord a => (a -> Bool) -> (a -> [a]) -> [a] -> a
+bfs _ _ [] = error "No solution found"
+bfs done getNeighbours (start:queue)
+  | done start = start
+  | otherwise = bfs done getNeighbours (queue ++ newNeighbours)
+  where
+    queueS = Set.fromList queue
+    newNeighbours = (queue++) . filter (`Set.member` queueS) . getNeighbours $ start
