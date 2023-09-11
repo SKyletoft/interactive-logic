@@ -173,15 +173,32 @@ parseLaw = do
       putStr "V"
       c2 <- getChar
       case c2 of
-        'l' -> do
-          putStrLn "e1"
-          fmap Just $ OrEliminationLeft <$> readLn <*> readLn
-        'r' -> do
-          putStrLn "e2"
-          fmap Just $ OrEliminationRight <$> readLn <*> readLn
+        'e' -> do
+          putStr "e"
+          c3 <- getChar
+          case c3 of
+            'l' -> do
+              putStrLn "e1"
+              fmap Just $ OrEliminationLeft <$> readLn <*> readLn
+            'r' -> do
+              putStrLn "e2"
+              fmap Just $ OrEliminationRight <$> readLn <*> readLn
+            _ -> do
+              putStrLn " | Error"
+              return Nothing
         'i' -> do
-          putStrLn "i"
-          fmap Just $ OrIntroduction <$> readLn <*> readLn
+          putStr "i"
+          c3 <- getChar
+          case c3 of
+            'l' -> do
+              putStrLn "(Number, Statement): "
+              fmap Just $ OrIntroductionLeft <$> readLn <*> parseLn
+            'r' -> do
+              putStrLn "(Statement, Number): "
+              fmap Just $ OrIntroductionRight <$> parseLn <*> readLn
+            _ -> do
+              putStrLn " | Error"
+              return Nothing
         _ -> do
           putStrLn " | Error"
           return Nothing
@@ -219,7 +236,8 @@ data Law
   | NotBottom
   | OrEliminationLeft Int Int
   | OrEliminationRight Int Int
-  | OrIntroduction Int Int
+  | OrIntroductionLeft Int Statement
+  | OrIntroductionRight Statement Int
   | Premise Statement
   | Quit
   | FillerL
@@ -290,7 +308,8 @@ prettyShowLaw =
   -- NotBottom
   -- OrEliminationLeft Int Int
   -- OrEliminationRight Int Int
-  -- OrIntroduction Int Int
+    OrIntroductionLeft x _ -> "Vi " ++ show x
+    OrIntroductionRight _ x -> "Vi " ++ show x
     Premise _ -> "Premise"
     AssumptionIntroduction _ -> "Assumption"
     NotIntroduction x -> "Syntax change " ++ show x
@@ -365,6 +384,12 @@ checkStatement ss =
             then Just r
             else Nothing
         _ -> Nothing
+    OrIntroductionLeft x y -> do
+      x' <- ss !? x
+      Just $ x' `Or` y
+    OrIntroductionRight x y -> do
+      y' <- ss !? y
+      Just $ x `Or` y'
     Contradiction x y -> do
       x' <- ss !? x
       y' <- ss !? y
