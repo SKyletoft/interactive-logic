@@ -422,7 +422,8 @@ checkStatement ss =
       Just $ l' `Or` Not l'
     Premise s -> Just s
     ImplicationIntroduction _ -> do
-      error "hi"
+      Nothing
+      -- error "hi"
     ImplicationElimination l r -> do
       l' <- ss !? l
       r' <- ss !? r
@@ -454,6 +455,8 @@ checkStatement ss =
       case ss !? l of
         Just (x `Implies` Bottom) -> Just $ Not x
         _                         -> Nothing
+    NotElimination _ _ -> do
+      Nothing
     s -> error . show $ s
 
 check :: Statement -> Bool
