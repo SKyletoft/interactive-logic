@@ -7,3 +7,4 @@ Main-opt
 BnfcParser/Grammar
 BnfcParser/Makefile
 Grammar
+searcher/target
