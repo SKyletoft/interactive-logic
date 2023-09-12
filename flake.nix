@@ -41,6 +41,13 @@
 						haskellPackages.happy
 						idris2
 						gnumake
+
+						cargo
+						rustc
+						rustfmt
+						clippy
+						rust-analyzer
+						cargo-expand
 					];
 				};
 			}
