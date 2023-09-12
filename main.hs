@@ -529,11 +529,11 @@ applicableRules ss
   -- | AssumptionIntroduction Statement
   -- | DeriveAnything Int Statement
 
-bfs :: Ord a => (a -> Bool) -> (a -> [a]) -> [a] -> a
+bfs :: (Show a, Ord a) => (a -> Bool) -> (a -> [a]) -> [a] -> a
 bfs _ _ [] = error "No solution found"
 bfs done getNeighbours (start:queue)
   | done start = start
   | otherwise = bfs done getNeighbours (queue ++ newNeighbours)
   where
     queueS = Set.fromList queue
-    newNeighbours = (queue++) . filter (`Set.member` queueS) . getNeighbours $ start
+    newNeighbours = (queue++) . filter (`Set.notMember` queueS) . getNeighbours $ start
