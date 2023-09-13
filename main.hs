@@ -110,9 +110,9 @@ repl skipBackLog startingAt ss = do
           repl True startingAt ss
         else return . drop startingAt $ ss
     Just (Search s) -> do
-      let searchResult = bfs ((==s) . fst . last) applicableRules [ss]
+      let searchResult = bfs ((== s) . fst . last) applicableRules [ss]
       putStrLn . display $ searchResult
-      repl False  startingAt ss
+      repl False startingAt ss
     Just law' -> do
       case checkStatement (map fst ss) law' of
         Nothing -> do
@@ -122,6 +122,14 @@ repl skipBackLog startingAt ss = do
 
 parseLaw :: IO (Maybe Law)
 parseLaw = do
+  let readOne l io = do
+        Just i <- io
+        return . return $ l i
+  let readTwo l io1 io2 = do
+        Just i <- io1
+        Just i2 <- io2
+        return . return $ l i i2
+
   c <- getChar
   putStr $ replicate 50 ' ' ++ "\r"
   case c of
@@ -131,21 +139,19 @@ parseLaw = do
       case c2 of
         'l' -> do
           putStr "e1: "
-          fmap AndEliminationLeft <$> tryReadLn
+          readOne AndEliminationLeft tryReadLn
         'r' -> do
           putStr "e2: "
-          fmap AndEliminationRight <$> tryReadLn
+          readOne AndEliminationRight tryReadLn
         'i' -> do
           putStrLn "i"
-          Just i <- tryReadLn
-          Just i2 <- tryReadLn
-          fmap Just $ AndIntroduction <$> i <*> i2
+          readTwo AndIntroduction tryReadLn tryReadLn
         _ -> do
           putStrLn " | Error"
           return Nothing
     'c' -> do
       putStrLn "Contradiction:"
-      fmap Just $ Contradiction <$> readLn <*> readLn
+      readTwo Contradiction tryReadLn tryReadLn
     'i' -> do
       putStr "→"
       c2 <- getChar
@@ -155,26 +161,26 @@ parseLaw = do
           return $ Just (ImplicationIntroduction 0)
         'e' -> do
           putStrLn "e"
-          fmap Just $ ImplicationElimination <$> readLn <*> readLn
+          readTwo ImplicationElimination tryReadLn tryReadLn
         _ -> do
           putStrLn " | Error"
           return Nothing
     'l' -> do
       putStr "LEM: "
-      fmap (Just . LEM) readLn
+      readOne LEM tryReadLn
     'm' -> do
       putStrLn "MT"
-      fmap Just $ ModusTollens <$> readLn <*> readLn
+      readTwo ModusTollens tryReadLn tryReadLn
     'n' -> do
       putStr "¬"
       c2 <- getChar
       case c2 of
         'i' -> do
           putStrLn "i"
-          fmap Just $ NotIntroduction <$> readLn
+          readOne NotIntroduction tryReadLn
         'e' -> do
           putStrLn "e"
-          fmap Just $ NotElimination <$> readLn <*> readLn
+          readTwo NotElimination tryReadLn tryReadLn
         'b' -> do
           putStrLn "b"
           return $ Just NotBottom
@@ -191,10 +197,10 @@ parseLaw = do
           case c3 of
             'l' -> do
               putStrLn "e1"
-              fmap Just $ OrEliminationLeft <$> readLn <*> readLn
+              readTwo OrEliminationLeft tryReadLn tryReadLn
             'r' -> do
               putStrLn "e2"
-              fmap Just $ OrEliminationRight <$> readLn <*> readLn
+              readTwo OrEliminationRight tryReadLn tryReadLn
             _ -> do
               putStrLn " | Error"
               return Nothing
@@ -204,10 +210,10 @@ parseLaw = do
           case c3 of
             'l' -> do
               putStrLn "(Number, Statement): "
-              fmap Just $ OrIntroductionLeft <$> readLn <*> parseLn
+              readTwo OrIntroductionLeft tryReadLn tryParseLn
             'r' -> do
               putStrLn "(Statement, Number): "
-              fmap Just $ OrIntroductionRight <$> parseLn <*> readLn
+              readTwo OrIntroductionRight tryParseLn tryReadLn
             _ -> do
               putStrLn " | Error"
               return Nothing
@@ -216,14 +222,14 @@ parseLaw = do
           return Nothing
     'p' -> do
       putStr "Premise: "
-      fmap (Just . Premise) parseLn
+      readOne Premise tryParseLn
     'q' -> return $ Just Quit
     's' -> do
       putStr "Assumption: "
-      fmap (Just . AssumptionIntroduction) parseLn
+      readOne AssumptionIntroduction tryParseLn
     'S' -> do
       putStr "Search for: "
-      fmap (Just . Search) parseLn
+      readOne Search tryParseLn
     '\127' -> do
       putStr "\r                             \r"
       return Nothing
@@ -500,11 +506,10 @@ similarity l r =
    in fromIntegral (Set.size shared) / fromIntegral (Set.size all)
 
 applicableRules :: [(Statement, Law)] -> [[(Statement, Law)]]
-applicableRules ss
-  = map (\s -> ss ++ [Maybe.fromJust s])
-  . filter Maybe.isJust
-  . map (\l -> (,l) <$> checkStatement ss' l)
-  $ rules
+applicableRules ss =
+  map (\s -> ss ++ [Maybe.fromJust s]) .
+  filter Maybe.isJust . map (\l -> (, l) <$> checkStatement ss' l) $
+  rules
   where
     ss' = map fst ss
     singles = [0 .. length ss]
@@ -529,7 +534,6 @@ applicableRules ss
     singleRules' = [rule n | rule <- singleRules, n <- singles]
     pairRules' = [rule m n | rule <- pairRules, m <- singles, n <- singles]
     rules = singleRules' ++ pairRules'
-
   -- For later
   -- | OrIntroductionLeft Int Statement
   -- | OrIntroductionRight Statement Int
@@ -543,4 +547,5 @@ bfs done getNeighbours (start:queue)
   | otherwise = bfs done getNeighbours (queue ++ newNeighbours)
   where
     queueS = Set.fromList queue
-    newNeighbours = (queue++) . filter (`Set.notMember` queueS) . getNeighbours $ start
+    newNeighbours =
+      (queue ++) . filter (`Set.notMember` queueS) . getNeighbours $ start
