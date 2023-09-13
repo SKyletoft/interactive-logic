@@ -59,7 +59,7 @@ tryReadLn :: Read a => IO (Maybe a)
 tryReadLn = fmap Text.Read.readMaybe getLine
 
 tryParseLn :: IO (Maybe Statement)
-tryParseLn = fmap Text.Read.readMaybe getLine
+tryParseLn = fmap parseStatement getLine
 
 ------------------------------ HELPERS ------------------------------
 todo :: a
