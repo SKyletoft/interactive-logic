@@ -129,7 +129,6 @@ parseLaw = do
         Just i <- io1
         Just i2 <- io2
         return . return $ l i i2
-
   c <- getChar
   putStr $ replicate 50 ' ' ++ "\r"
   case c of
