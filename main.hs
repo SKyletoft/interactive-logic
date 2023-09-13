@@ -122,13 +122,30 @@ repl skipBackLog startingAt ss = do
 
 parseLaw :: IO (Maybe Law)
 parseLaw = do
-  let readOne l io = do
-        Just i <- io
-        return . return $ l i
-  let readTwo l io1 io2 = do
-        Just i <- io1
-        Just i2 <- io2
-        return . return $ l i i2
+  let printOnError :: Maybe a -> IO (Maybe a)
+      printOnError =
+        \case
+          Nothing -> putStrLn "Parse error" >> return Nothing
+          x -> return x
+  let joinIO :: IO (Maybe a) -> IO (Maybe b) -> IO (Maybe (a, b))
+      joinIO a b = do
+        a' <- a
+        case a' of
+          Nothing -> return Nothing
+          Just a'' -> do
+            b' <- b
+            case b' of
+              Nothing  -> return Nothing
+              Just b'' -> return . Just $ (a'', b'')
+  let readOne :: (a -> Law) -> IO (Maybe a) -> IO (Maybe Law)
+      readOne l io = do
+        i <- printOnError =<< io
+        return $ fmap l i
+  let readTwo ::
+           (a -> b -> Law) -> IO (Maybe a) -> IO (Maybe b) -> IO (Maybe Law)
+      readTwo l io1 io2 = do
+        i <- joinIO (printOnError =<< io1) (printOnError =<< io2)
+        return $ uncurry l <$> i
   c <- getChar
   putStr $ replicate 50 ' ' ++ "\r"
   case c of
