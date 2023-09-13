@@ -14,13 +14,15 @@ import qualified Data.Set         as Set
 import qualified GHC.IO.Handle    (hFlush)
 import qualified GHC.IO.Handle.FD (stdout)
 
-import           Prelude          hiding (getChar, putStr, putStrLn)
+import           Prelude          hiding (getChar, putStr, putStrLn, readLn)
 import qualified Prelude
 
 import           Data.Maybe       (isJust)
 import           Grammar.Abs      (Exp (..))
 import qualified Grammar.Abs      as Abs
 import qualified Grammar.Par      as Par
+
+import qualified Text.Read
 
 type S a = Set.Set a
 
@@ -36,9 +38,6 @@ True --> False = False
 _ --> _        = True
 
 ---------------------------- IO WRAPPERS ----------------------------
-parseLn :: IO Statement
-parseLn = fmap parseStatement getLine
-
 getChar :: IO Char
 getChar = do
   Termios.setupTerminal
@@ -55,6 +54,12 @@ putStrLn :: String -> IO ()
 putStrLn s = do
   Prelude.putStrLn s
   GHC.IO.Handle.hFlush GHC.IO.Handle.FD.stdout
+
+tryReadLn :: Read a => IO (Maybe a)
+tryReadLn = fmap Text.Read.readMaybe getLine
+
+tryParseLn :: IO (Maybe Statement)
+tryParseLn = fmap Text.Read.readMaybe getLine
 
 ------------------------------ HELPERS ------------------------------
 todo :: a
@@ -126,13 +131,15 @@ parseLaw = do
       case c2 of
         'l' -> do
           putStr "e1: "
-          fmap (Just . AndEliminationLeft) readLn
+          fmap AndEliminationLeft <$> tryReadLn
         'r' -> do
           putStr "e2: "
-          fmap (Just . AndEliminationRight) readLn
+          fmap AndEliminationRight <$> tryReadLn
         'i' -> do
           putStrLn "i"
-          fmap Just $ AndIntroduction <$> readLn <*> readLn
+          Just i <- tryReadLn
+          Just i2 <- tryReadLn
+          fmap Just $ AndIntroduction <$> i <*> i2
         _ -> do
           putStrLn " | Error"
           return Nothing
@@ -273,11 +280,11 @@ convert =
     ENot e -> Not (convert e)
     EVar (Abs.Ident n) -> Variable n
 
-parseStatement :: String -> Statement
+parseStatement :: String -> Maybe Statement
 parseStatement s =
   case Par.pExp . Par.myLexer $ s of
-    Right res -> convert res
-    Left _    -> read s
+    Right res -> Just $ convert res
+    Left _    -> Text.Read.readMaybe s
 
 prettyShow :: Statement -> String
 prettyShow = unwrap . prettyShow'
