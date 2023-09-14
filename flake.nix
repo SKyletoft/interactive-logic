@@ -17,11 +17,15 @@
 					version = "0.0.1";
 					src = ./.;
 
+					# BNFC seems to require LANG and glibcLocales to run
+					LANG = "en_US.UTF-8";
+
 					nativeBuildInputs = with pkgs; [
 						ghc
 						haskellPackages.BNFC
 						haskellPackages.alex
 						haskellPackages.happy
+						glibcLocales # For BNFC
 					];
 
 					installPhase = ''
