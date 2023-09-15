@@ -1,8 +1,8 @@
-Main-opt: main.hs termops.o Grammar/Par.hs
-	ghc -O3 main.hs -g termops.o -o Main-opt
+Main-opt: Main.hs termops.o Grammar/Par.hs
+	ghc -O3 Main.hs -g termops.o -o Main-opt
 
-Main: main.hs termops.o Grammar/Par.hs
-	ghc main.hs -g termops.o -o Main
+Main: Main.hs termops.o Grammar/Par.hs
+	ghc Main.hs -g termops.o -o Main
 
 Grammar/Abs.hs: Grammar/Par.hs
 
@@ -20,6 +20,7 @@ clean:
 	-rm *.o
 	-rm FFI/*.hi
 	-rm FFI/*.o
-	-rm main
+	-rm Main
+	-rm Main-opt
 	-rm BnfcParser/Grammar -rf
 	-rm Grammar -rf
