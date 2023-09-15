@@ -43,7 +43,6 @@
 						haskellPackages.BNFC
 						haskellPackages.alex
 						haskellPackages.happy
-						idris2
 						gnumake
 
 						cargo
