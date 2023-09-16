@@ -51,6 +51,7 @@
 						clippy
 						rust-analyzer
 						cargo-expand
+						hyperfine
 					];
 				};
 			}
