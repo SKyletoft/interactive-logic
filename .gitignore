@@ -1,5 +1,6 @@
 .envrc
 build
+result
 *.o
 *.hi
 Main
